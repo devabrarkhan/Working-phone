@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phone Tester – Mobile Diagnostic Tool</title>
+
+<style>
+/* ===================== ROOT & RESET ===================== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: radial-gradient(circle at top, #020617, #000);
+  color: #fff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ===================== APP LAYOUT ===================== */
+.app {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ===================== SIDEBAR ===================== */
+.sidebar {
+  width: 220px;
+  border-right: 1px solid rgba(0,255,255,0.25);
+  padding: 12px;
+}
+.sidebar button {
+  width: 100%;
+  background: transparent;
+  color: #fff;
+  font-weight: 600;
+  border: 1px solid #00ffff;
+  padding: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.sidebar button.active,
+.sidebar button:hover {
+  box-shadow: 0 0 12px #00ffff;
+}
+
+/* Mobile nav */
+@media (max-width: 720px) {
+  .app { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    display: flex;
+    overflow-x: auto;
+  }
+  .sidebar button {
+    min-width: 160px;
+    margin-right: 10px;
+  }
+}
+
+/* ===================== MAIN ===================== */
+main {
+  flex: 1;
+  padding: 16px;
+}
+
+/* ===================== CARDS ===================== */
+.card {
+  background: rgba(15,23,42,0.9);
+  border: 1px solid rgba(0,255,255,0.35);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.card h2 {
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+}
+
+/* ===================== BUTTONS ===================== */
+.btn {
+  background: transparent;
+  border: 1px solid #00ffff;
+  color: #fff;
+  padding: 8px 12px;
+  margin: 6px 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn:hover {
+  box-shadow: 0 0 10px #00ffff;
+}
+
+/* ===================== STATUS ===================== */
+.status {
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+.status.ok { color: #00ff99; }
+.status.err { color: #ff5555; }
+.status.active { color: #00ffff; }
+
+/* ===================== SECTIONS ===================== */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ===================== OVERLAYS ===================== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 999;
+  display: none;
+}
+.overlay.active { display: block; }
+.overlay-bar {
+  height: 44px;
+  border-bottom: 1px solid #00ffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+}
+.overlay canvas {
+  width: 100%;
+  height: calc(100% - 44px);
+  touch-action: none;
+}
+
+/* ===================== VIDEO & AUDIO ===================== */
+video, audio {
+  width: 100%;
+  margin-top: 10px;
+}
+textarea {
+  width: 100%;
+  min-height: 260px;
+  background: #000;
+  color: #00ffff;
+  border: 1px solid #00ffff;
+  padding: 10px;
+  font-family: monospace;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<!-- ===================== SIDEBAR ===================== -->
+<nav class="sidebar">
+  <button class="active" data-section="sound">Sound & Vibration</button>
+  <button data-section="display">Display & Touch</button>
+  <button data-section="sensors">Sensors</button>
+  <button data-section="camera">Camera & Mic</button>
+  <button data-section="system">System Info</button>
+  <button data-section="report">Test Report</button>
+</nav>
+
+<!-- ===================== MAIN ===================== -->
+<main>
+
+<!-- ===================== SECTION 1 ===================== -->
+<section id="sound" class="section active">
+
+<div class="card">
+<h2>Speaker Test</h2>
+<button class="btn" onclick="playTone(5000,'square',1)">High Loud</button>
+<button class="btn" onclick="playTone(1200,'sawtooth',0.7)">Mid</button>
+<button class="btn" onclick="playTone(300,'sine',0.5)">Low</button>
+<button class="btn" onclick="stereoTest()">Stereo L/R</button>
+<button class="btn" onclick="stopSound()">Stop</button>
+<div id="soundStatus" class="status">Sound: idle</div>
+</div>
+
+<div class="card">
+<h2>Vibration</h2>
+<button class="btn" onclick="vibrate([300,100,300,100,300])">Strong</button>
+<button class="btn" onclick="vibrate([200,80,200])">Medium</button>
+<button class="btn" onclick="vibrate(120)">Low</button>
+<button class="btn" onclick="vibrate(0)">Stop</button>
+<div id="vibStatus" class="status">Vibration: idle</div>
+</div>
+
+</section>
+
+<!-- ===================== SECTION 2 ===================== -->
+<section id="display" class="section">
+<div class="card">
+<h2>Touch Grid Test</h2>
+<button class="btn" onclick="startTouchTest()">Start Touch Test</button>
+</div>
+
+<div class="card">
+<h2>Color / Dead Pixel</h2>
+<button class="btn" onclick="openColor('#000')">Black</button>
+<button class="btn" onclick="openColor('#fff')">White</button>
+<button class="btn" onclick="openColor('red')">Red</button>
+<button class="btn" onclick="openColor('green')">Green</button>
+<button class="btn" onclick="openColor('blue')">Blue</button>
+</div>
+</section>
+
+<!-- ===================== SECTION 3 ===================== -->
+<section id="sensors" class="section">
+<div class="card">
+<h2>Orientation</h2>
+<div id="orientData">Waiting…</div>
+</div>
+
+<div class="card">
+<h2>GPS</h2>
+<button class="btn" onclick="getLocation()">Get Location</button>
+<div id="geoStatus" class="status"></div>
+</div>
+</section>
+
+<!-- ===================== SECTION 4 ===================== -->
+<section id="camera" class="section">
+<div class="card">
+<h2>Camera</h2>
+<button class="btn" onclick="startCam('environment')">Rear</button>
+<button class="btn" onclick="startCam('user')">Front</button>
+<button class="btn" onclick="stopCam()">Stop</button>
+<video id="video" autoplay playsinline muted></video>
+<div id="camStatus" class="status"></div>
+</div>
+
+<div class="card">
+<h2>Microphone</h2>
+<button class="btn" onclick="startRec()">Start</button>
+<button class="btn" onclick="stopRec()">Stop</button>
+<audio id="audio" controls></audio>
+<div id="micStatus" class="status"></div>
+</div>
+</section>
+
+<!-- ===================== SECTION 5 ===================== -->
+<section id="system" class="section">
+<div class="card">
+<h2>Battery</h2>
+<div id="batteryInfo"></div>
+</div>
+
+<div class="card">
+<h2>Storage</h2>
+<div id="storageInfo"></div>
+</div>
+
+<div class="card">
+<h2>Network</h2>
+<div id="netInfo"></div>
+</div>
+</section>
+
+<!-- ===================== SECTION 6 ===================== -->
+<section id="report" class="section">
+<div class="card">
+<h2>Diagnostic Report</h2>
+<button class="btn" onclick="refreshReport()">Refresh</button>
+<button class="btn" onclick="copyReport()">Copy</button>
+<textarea id="reportBox" readonly></textarea>
+<div id="copyStatus" class="status"></div>
+</div>
+</section>
+
+</main>
+</div>
+
+<!-- ===================== TOUCH OVERLAY ===================== -->
+<div id="touchOverlay" class="overlay">
+<div class="overlay-bar">
+<span>Touch all areas</span>
+<button class="btn" onclick="closeTouch()">Exit</button>
+</div>
+<canvas id="touchCanvas"></canvas>
+</div>
+
+<script>
+/* ===================== REPORT OBJECT ===================== */
+const report = {
+  sound:{}, vibration:{}, touch:{}, display:{},
+  orientation:{}, geo:{},
+  camera:{}, mic:{},
+  battery:{}, storage:{}, network:{}
+};
+
+/* ===================== NAV ===================== */
+document.querySelectorAll('.sidebar button').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.section).classList.add('active');
+    if(btn.dataset.section==='report') refreshReport();
+  }
+});
+
+/* ===================== SOUND ===================== */
+let ctx, osc;
+function playTone(freq,type,gain){
+  stopSound();
+  try{
+    ctx=new AudioContext();
+    osc=ctx.createOscillator();
+    const g=ctx.createGain();
+    osc.type=type; osc.frequency.value=freq;
+    g.gain.value=gain;
+    osc.connect(g).connect(ctx.destination);
+    osc.start();
+    document.getElementById('soundStatus').textContent='Sound: running';
+    report.sound.lastTone=freq;
+  }catch(e){
+    document.getElementById('soundStatus').textContent='Sound blocked';
+  }
+}
+function stereoTest(){
+  if(!AudioContext)return;
+  ctx=new AudioContext();
+  osc=ctx.createOscillator();
+  const pan=ctx.createStereoPanner();
+  osc.connect(pan).connect(ctx.destination);
+  osc.frequency.value=1200;
+  osc.start();
+  pan.pan.value=-1;
+  setTimeout(()=>pan.pan.value=1,1000);
+  setTimeout(stopSound,2000);
+}
+function stopSound(){
+  if(osc){osc.stop();osc=null;}
+  if(ctx){ctx.close();ctx=null;}
+}
+
+/* ===================== VIBRATION ===================== */
+function vibrate(p){
+  if(!navigator.vibrate){
+    vibStatus.textContent='Vibration not supported';
+    return;
+  }
+  navigator.vibrate(p);
+  report.vibration.lastPattern=p;
+}
+
+/* ===================== TOUCH ===================== */
+const tCanvas=document.getElementById('touchCanvas');
+const tCtx=tCanvas.getContext('2d');
+let cols=10,rows=18,grid=[];
+function startTouchTest(){
+  touchOverlay.classList.add('active');
+  tCanvas.width=innerWidth;
+  tCanvas.height=innerHeight-44;
+  grid=Array(cols*rows).fill(false);
+  drawGrid();
+  report.touch.tested=true;
+}
+function drawGrid(){
+  const w=tCanvas.width/cols,h=tCanvas.height/rows;
+  tCtx.clearRect(0,0,tCanvas.width,tCanvas.height);
+  for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){
+    const idx=j*cols+i;
+    tCtx.strokeStyle='#00ffff';
+    tCtx.strokeRect(i*w,j*h,w,h);
+    if(grid[idx]){
+      tCtx.fillStyle='#00ff99';
+      tCtx.fillRect(i*w,j*h,w,h);
+    }
+  }
+}
+tCanvas.addEventListener('touchstart',e=>{
+  for(const t of e.touches){
+    const x=Math.floor(t.clientX/(tCanvas.width/cols));
+    const y=Math.floor((t.clientY-44)/(tCanvas.height/rows));
+    const idx=y*cols+x;
+    if(grid[idx]!==undefined) grid[idx]=true;
+  }
+  drawGrid();
+});
+function closeTouch(){touchOverlay.classList.remove('active');}
+
+/* ===================== COLOR ===================== */
+function openColor(c){
+  const o=document.createElement('div');
+  o.className='overlay active';
+  o.innerHTML=`<div class="overlay-bar"><span>${c}</span><button class="btn">Exit</button></div>`;
+  o.style.background=c;
+  o.querySelector('button').onclick=()=>o.remove();
+  document.body.appendChild(o);
+  report.display.lastColor=c;
+}
+
+/* ===================== ORIENTATION ===================== */
+if(window.DeviceOrientationEvent){
+  window.addEventListener('deviceorientation',e=>{
+    orientData.textContent=`α:${e.alpha?.toFixed(1)} β:${e.beta?.toFixed(1)} γ:${e.gamma?.toFixed(1)}`;
+    report.orientation.lastValues={a:e.alpha,b:e.beta,g:e.gamma};
+  });
+}
+
+/* ===================== GEO ===================== */
+function getLocation(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(p=>{
+    geoStatus.textContent=`Lat:${p.coords.latitude.toFixed(5)} Lon:${p.coords.longitude.toFixed(5)}`;
+    report.geo.lastFix=p.coords;
+  },e=>{
+    geoStatus.textContent='Location error';
+  });
+}
+
+/* ===================== CAMERA ===================== */
+let stream;
+function startCam(mode){
+  stopCam();
+  navigator.mediaDevices.getUserMedia({video:{facingMode:mode}})
+  .then(s=>{
+    stream=s; video.srcObject=s;
+    report.camera.lastMode=mode;
+  })
+  .catch(e=>camStatus.textContent='Camera error');
+}
+function stopCam(){
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  video.srcObject=null;
+}
+
+/* ===================== MIC ===================== */
+let rec, chunks=[];
+function startRec(){
+  navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
+    rec=new MediaRecorder(s);
+    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=()=>{
+      const b=new Blob(chunks,{type:'audio/webm'});
+      audio.src=URL.createObjectURL(b);
+      report.mic.lastResult='success';
+    };
+    rec.start();
+  });
+}
+function stopRec(){ if(rec)rec.stop(); }
+
+/* ===================== SYSTEM ===================== */
+if(navigator.getBattery){
+  navigator.getBattery().then(b=>{
+    batteryInfo.textContent=`${Math.round(b.level*100)}% Charging:${b.charging}`;
+    report.battery.level=b.level;
+  });
+}
+if(navigator.storage?.estimate){
+  navigator.storage.estimate().then(e=>{
+    storageInfo.textContent=`Used ${(e.usage/1e6).toFixed(1)}MB / ${(e.quota/1e6).toFixed(1)}MB`;
+    report.storage.usage=e;
+  });
+}
+netInfo.textContent=`Online: ${navigator.onLine}`;
+report.network.online=navigator.onLine;
+
+/* ===================== REPORT ===================== */
+function refreshReport(){
+  reportBox.value=JSON.stringify(report,null,2);
+}
+function copyReport(){
+  navigator.clipboard.writeText(reportBox.value)
+  .then(()=>copyStatus.textContent='Copied');
+}
+</script>
+</body>
+  </html>
+  
